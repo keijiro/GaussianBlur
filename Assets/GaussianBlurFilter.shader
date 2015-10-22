@@ -51,14 +51,13 @@
         return gaussian_filter(i.uv, float2(0, _MainTex_TexelSize.y));
     }
 
-    ENDCG 
+    ENDCG
 
     Subshader
     {
         Pass
         {
             ZTest Always Cull Off ZWrite Off
-            Fog { Mode off }      
             CGPROGRAM
             #pragma vertex vert_img
             #pragma fragment frag_quarter
@@ -67,23 +66,19 @@
         Pass
         {
             ZTest Always Cull Off ZWrite Off
-            Fog { Mode off }      
             CGPROGRAM
             #pragma vertex vert_img
             #pragma fragment frag_blur_h
             #pragma target 3.0
-            #pragma glsl
             ENDCG
         }
         Pass
         {
             ZTest Always Cull Off ZWrite Off
-            Fog { Mode off }      
             CGPROGRAM
             #pragma vertex vert_img
             #pragma fragment frag_blur_v
             #pragma target 3.0
-            #pragma glsl
             ENDCG
         }
     }
