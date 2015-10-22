@@ -12,40 +12,41 @@
     sampler2D _MainTex;
     float4 _MainTex_TexelSize;
 
-    // Coefficients for the linear sampling Gaussian filter.
+    // 9-tap Gaussian filter with linear sampling
     // http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
-    static const float offset[3] = { 0.0, 1.3846153846, 3.2307692308 };
-    static const float weight[3] = { 0.2270270270, 0.3162162162, 0.0702702703 };
-
-    // Filter function of the separable Gaussian filter.
-    float4 gaussian_filter(float2 uv, float2 stride)
+    half4 gaussian_filter(float2 uv, float2 stride)
     {
-        float4 s = tex2D(_MainTex, uv) * weight[0];
-        for (int i = 1; i < 3; i++)
-        {
-            float2 d = stride * offset[i];
-            s += tex2D(_MainTex, uv + d) * weight[i];
-            s += tex2D(_MainTex, uv - d) * weight[i];
-        }
+        half4 s = tex2D(_MainTex, uv) * 0.227027027;
+
+        float2 d1 = stride * 1.3846153846;
+        s += tex2D(_MainTex, uv + d1) * 0.3162162162;
+        s += tex2D(_MainTex, uv - d1) * 0.3162162162;
+
+        float2 d2 = stride * 3.2307692308;
+        s += tex2D(_MainTex, uv + d2) * 0.0702702703;
+        s += tex2D(_MainTex, uv - d2) * 0.0702702703;
+
         return s;
     }
 
-    // Quarter downsampling.
+    // Quarter downsampler
     half4 frag_quarter(v2f_img i) : SV_Target
     {
-        float4 s;
-        s  = tex2D(_MainTex, i.uv + _MainTex_TexelSize * float2(-1, -1));
-        s += tex2D(_MainTex, i.uv + _MainTex_TexelSize * float2(+1, -1));
-        s += tex2D(_MainTex, i.uv + _MainTex_TexelSize * float2(-1, +1));
-        s += tex2D(_MainTex, i.uv + _MainTex_TexelSize * float2(+1, +1));
-        return s / 4;
+        float4 d = _MainTex_TexelSize.xyxy * float4(1, 1, -1, -1);
+        half4 s;
+        s  = tex2D(_MainTex, i.uv + d.xy);
+        s += tex2D(_MainTex, i.uv + d.xw);
+        s += tex2D(_MainTex, i.uv + d.zy);
+        s += tex2D(_MainTex, i.uv + d.zw);
+        return s * 0.25;
     }
 
-    // Separable Gaussian filter functions (horizontal/vertical).
+    // Separable Gaussian filters
     half4 frag_blur_h(v2f_img i) : SV_Target
     {
         return gaussian_filter(i.uv, float2(_MainTex_TexelSize.x, 0));
     }
+
     half4 frag_blur_v(v2f_img i) : SV_Target
     {
         return gaussian_filter(i.uv, float2(0, _MainTex_TexelSize.y));
