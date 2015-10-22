@@ -1,18 +1,21 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 [ExecuteInEditMode]
 public class FilterTest : MonoBehaviour
 {
-    [SerializeField] Shader _shader;
+    enum DownSampleMode { Off, Half, Quarter }
 
-    public Texture2D baseTexture;
+    [SerializeField, HideInInspector]
+    Shader _shader;
 
-    public enum DownSampleMode { Off, Half, Quarter }
-    public DownSampleMode downSampleMode;
+    [SerializeField]
+    Texture2D _baseTexture;
 
-    [Range(0, 8)]
-    public int iteration = 1;
+    [SerializeField]
+    DownSampleMode _downSampleMode = DownSampleMode.Quarter;
+
+    [SerializeField, Range(0, 8)]
+    int _iteration = 4;
 
     Material _material;
 
@@ -26,26 +29,26 @@ public class FilterTest : MonoBehaviour
 
         RenderTexture rt1, rt2;
 
-        if (downSampleMode == DownSampleMode.Half)
+        if (_downSampleMode == DownSampleMode.Half)
         {
             rt1 = RenderTexture.GetTemporary(source.width / 2, source.height / 2);
             rt2 = RenderTexture.GetTemporary(source.width / 2, source.height / 2);
-            Graphics.Blit(baseTexture, rt1);
+            Graphics.Blit(_baseTexture, rt1);
         }
-        else if (downSampleMode == DownSampleMode.Quarter)
+        else if (_downSampleMode == DownSampleMode.Quarter)
         {
             rt1 = RenderTexture.GetTemporary(source.width / 4, source.height / 4);
             rt2 = RenderTexture.GetTemporary(source.width / 4, source.height / 4);
-            Graphics.Blit(baseTexture, rt1, _material, 0);
+            Graphics.Blit(_baseTexture, rt1, _material, 0);
         }
         else
         {
             rt1 = RenderTexture.GetTemporary(source.width, source.height);
             rt2 = RenderTexture.GetTemporary(source.width, source.height);
-            Graphics.Blit(baseTexture, rt1);
+            Graphics.Blit(_baseTexture, rt1);
         }
 
-        for (var i = 0; i < iteration; i++)
+        for (var i = 0; i < _iteration; i++)
         {
             Graphics.Blit(rt1, rt2, _material, 1);
             Graphics.Blit(rt2, rt1, _material, 2);
