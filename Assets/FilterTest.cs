@@ -9,9 +9,6 @@ public class FilterTest : MonoBehaviour
     Shader _shader;
 
     [SerializeField]
-    Texture2D _baseTexture;
-
-    [SerializeField]
     DownSampleMode _downSampleMode = DownSampleMode.Quarter;
 
     [SerializeField, Range(0, 8)]
@@ -33,19 +30,19 @@ public class FilterTest : MonoBehaviour
         {
             rt1 = RenderTexture.GetTemporary(source.width / 2, source.height / 2);
             rt2 = RenderTexture.GetTemporary(source.width / 2, source.height / 2);
-            Graphics.Blit(_baseTexture, rt1);
+            Graphics.Blit(source, rt1);
         }
         else if (_downSampleMode == DownSampleMode.Quarter)
         {
             rt1 = RenderTexture.GetTemporary(source.width / 4, source.height / 4);
             rt2 = RenderTexture.GetTemporary(source.width / 4, source.height / 4);
-            Graphics.Blit(_baseTexture, rt1, _material, 0);
+            Graphics.Blit(source, rt1, _material, 0);
         }
         else
         {
             rt1 = RenderTexture.GetTemporary(source.width, source.height);
             rt2 = RenderTexture.GetTemporary(source.width, source.height);
-            Graphics.Blit(_baseTexture, rt1);
+            Graphics.Blit(source, rt1);
         }
 
         for (var i = 0; i < _iteration; i++)
