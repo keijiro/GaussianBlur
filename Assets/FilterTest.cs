@@ -3,16 +3,8 @@
 [ExecuteInEditMode]
 public class FilterTest : MonoBehaviour
 {
-    enum DownSampleMode { Off, Half, Quarter }
-
-    [SerializeField, HideInInspector]
-    Shader _shader;
-
-    [SerializeField]
-    DownSampleMode _downSampleMode = DownSampleMode.Quarter;
-
-    [SerializeField, Range(0, 8)]
-    int _iteration = 4;
+    [SerializeField, Range(0, 10)] float _scale = 1.0f;
+    [SerializeField, HideInInspector] Shader _shader;
 
     Material _material;
 
@@ -24,36 +16,43 @@ public class FilterTest : MonoBehaviour
             _material.hideFlags = HideFlags.HideAndDontSave;
         }
 
-        RenderTexture rt1, rt2;
+        var hlog = Mathf.Log(Screen.height, 2) + _scale - 5;
+        var icount = Mathf.Max(2, (int)hlog);
+        _material.SetFloat("_Scale", 0.5f + hlog - (int)hlog);
 
-        if (_downSampleMode == DownSampleMode.Half)
+        var rt1 = new RenderTexture[icount];
+        var rt2 = new RenderTexture[icount];
+        var tx = source.width;
+        var ty = source.height;
+
+        for (var i = 0; i < icount; i++)
         {
-            rt1 = RenderTexture.GetTemporary(source.width / 2, source.height / 2);
-            rt2 = RenderTexture.GetTemporary(source.width / 2, source.height / 2);
-            Graphics.Blit(source, rt1);
-        }
-        else if (_downSampleMode == DownSampleMode.Quarter)
-        {
-            rt1 = RenderTexture.GetTemporary(source.width / 4, source.height / 4);
-            rt2 = RenderTexture.GetTemporary(source.width / 4, source.height / 4);
-            Graphics.Blit(source, rt1, _material, 0);
-        }
-        else
-        {
-            rt1 = RenderTexture.GetTemporary(source.width, source.height);
-            rt2 = RenderTexture.GetTemporary(source.width, source.height);
-            Graphics.Blit(source, rt1);
+            tx /= 2;
+            ty /= 2;
+            rt1[i] = RenderTexture.GetTemporary(tx, ty);
+            rt2[i] = RenderTexture.GetTemporary(tx, ty);
         }
 
-        for (var i = 0; i < _iteration; i++)
+        Graphics.Blit(source, rt1[0], _material, 0);
+        for (var i = 1; i < icount; i++)
+            Graphics.Blit(rt1[i - 1], rt1[i], _material, 0);
+
+        _material.SetTexture("_BaseTex", rt1[icount - 2]);
+        Graphics.Blit(rt1[icount - 1], rt2[icount - 2], _material, 1);
+
+        for (var i = icount - 2; i > 0; i--)
         {
-            Graphics.Blit(rt1, rt2, _material, 1);
-            Graphics.Blit(rt2, rt1, _material, 2);
+            _material.SetTexture("_BaseTex", rt1[i - 1]);
+            Graphics.Blit(rt2[i],  rt2[i - 1], _material, 1);
         }
 
-        Graphics.Blit(rt1, destination);
+        _material.SetTexture("_BaseTex", source);
+        Graphics.Blit(rt2[0], destination, _material, 1);
 
-        RenderTexture.ReleaseTemporary(rt1);
-        RenderTexture.ReleaseTemporary(rt2);
+        for (var i = 0; i < icount; i++)
+        {
+            RenderTexture.ReleaseTemporary(rt1[i]);
+            RenderTexture.ReleaseTemporary(rt2[i]);
+        }
     }
 }
