@@ -7,38 +7,70 @@
 
     CGINCLUDE
 
+    #pragma multi_compile _ _NAIVE
+
     #include "UnityCG.cginc"
 
     sampler2D _MainTex;
     float4 _MainTex_TexelSize;
 
-    // 9-tap Gaussian filter with linear sampling
-    // http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
     half4 gaussian_filter(float2 uv, float2 stride)
     {
-        half4 s = tex2D(_MainTex, uv) * 0.227027027;
+        const float _k1 = 3432;
+        const float _k2 = 3003;
+        const float _k3 = 2002;
+        const float _k4 = 1001;
+        const float _k5 = 364;
+        const float _k6 = 91;
+        const float _k7 = 14;
 
-        float2 d1 = stride * 1.3846153846;
-        s += tex2D(_MainTex, uv + d1) * 0.3162162162;
-        s += tex2D(_MainTex, uv - d1) * 0.3162162162;
+        const float ksum = _k1 + (_k2 + _k3 + _k4 + _k5 + _k6 + _k7) * 2;
 
-        float2 d2 = stride * 3.2307692308;
-        s += tex2D(_MainTex, uv + d2) * 0.0702702703;
-        s += tex2D(_MainTex, uv - d2) * 0.0702702703;
+        const float k1 = _k1 / ksum;
+        const float k2 = _k2 / ksum;
+        const float k3 = _k3 / ksum;
+        const float k4 = _k4 / ksum;
+        const float k5 = _k5 / ksum;
+        const float k6 = _k6 / ksum;
+        const float k7 = _k7 / ksum;
+
+        half4 s = 0;
+
+        s += tex2D(_MainTex, uv + stride * 0) * k1;
+
+        s += tex2D(_MainTex, uv - stride * 1) * k2;
+        s += tex2D(_MainTex, uv + stride * 1) * k2;
+
+        s += tex2D(_MainTex, uv - stride * 2) * k3;
+        s += tex2D(_MainTex, uv + stride * 2) * k3;
+
+    #if _NAIVE
+
+        s += tex2D(_MainTex, uv - stride * 3) * k4;
+        s += tex2D(_MainTex, uv + stride * 3) * k4;
+
+        s += tex2D(_MainTex, uv - stride * 4) * k5;
+        s += tex2D(_MainTex, uv + stride * 4) * k5;
+
+        s += tex2D(_MainTex, uv - stride * 5) * k6;
+        s += tex2D(_MainTex, uv + stride * 5) * k6;
+
+        s += tex2D(_MainTex, uv - stride * 6) * k7;
+        s += tex2D(_MainTex, uv + stride * 6) * k7;
+
+    #else
+
+        const float d1 = (3 * k4 + 4 * k5) / (k4 + k5);
+        s += tex2D(_MainTex, uv - stride * d1) * (k4 + k5);
+        s += tex2D(_MainTex, uv + stride * d1) * (k4 + k5);
+
+        const float d2 = (5 * k6 + 6 * k7) / (k6 + k7);
+        s += tex2D(_MainTex, uv - stride * d2) * (k6 + k7);
+        s += tex2D(_MainTex, uv + stride * d2) * (k6 + k7);
+
+    #endif
 
         return s;
-    }
-
-    // Quarter downsampler
-    half4 frag_quarter(v2f_img i) : SV_Target
-    {
-        float4 d = _MainTex_TexelSize.xyxy * float4(1, 1, -1, -1);
-        half4 s;
-        s  = tex2D(_MainTex, i.uv + d.xy);
-        s += tex2D(_MainTex, i.uv + d.xw);
-        s += tex2D(_MainTex, i.uv + d.zy);
-        s += tex2D(_MainTex, i.uv + d.zw);
-        return s * 0.25;
     }
 
     // Separable Gaussian filters
@@ -56,14 +88,6 @@
 
     Subshader
     {
-        Pass
-        {
-            ZTest Always Cull Off ZWrite Off
-            CGPROGRAM
-            #pragma vertex vert_img
-            #pragma fragment frag_quarter
-            ENDCG
-        }
         Pass
         {
             ZTest Always Cull Off ZWrite Off
